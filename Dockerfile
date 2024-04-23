@@ -10,7 +10,11 @@ RUN apt-get update && apt-get install -y \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-COPY . /app
+RUN git clone https://github.com/Booss3my/Sample_streamlit_app.git
+
+RUN cp -R Sample_streamlit_app/* ./
+
+RUN rm -rf Sample_streamlit_app
 
 RUN pip install -r requirements.txt
 
