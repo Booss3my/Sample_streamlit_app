@@ -11,7 +11,7 @@ st.markdown(
 <style>
 [data-testid="stMetricValue"] {
     font-size: 40px;
-    color: rgb(0, 153, 76);
+#    color: rgb(0, 170, 60);
 }
 </style>
 """,
