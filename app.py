@@ -22,8 +22,9 @@ st.markdown(
 @st.cache_data
 def read_data(path):
     sales_df = pd.read_parquet(path)
-    sales_df = sales_df.loc[(sales_df.UnitPrice > 0) & (
-        sales_df.Quantity > 0)].reset_index(drop=True)
+    sales_df = sales_df.loc[
+        (sales_df.UnitPrice > 0) & (sales_df.Quantity > 0)
+    ].reset_index(drop=True)
     sales_df["InvoiceDate"] = pd.to_datetime(sales_df["InvoiceDate"])
     return sales_df
 
@@ -47,13 +48,16 @@ def mergeIds(sales_df):
     Product_ids = {}
     for label in np.unique(labels):
         desc = descriptions[labels == label]
-    # give products that are unique a unique id
+        # give products that are unique a unique id
         if label == -1:
             for i, k in enumerate(desc):
                 Product_ids[k] = f"{i}"
         else:
             price_clust = MeanShift(bandwidth=1).fit(
-                prices.loc[descriptions[labels == label]].to_numpy().reshape(-1, 1))
+                prices.loc[
+                    descriptions[labels == label]
+                ].to_numpy().reshape(-1, 1)
+            )
             for i, price_label in enumerate(price_clust.labels_):
                 Product_ids[desc[i]] = f"{label}_{price_label}"
     bar.empty()
@@ -61,11 +65,13 @@ def mergeIds(sales_df):
 
 
 def first_day_of_interval(dates, interval_in_days):
-    intervals = dates.apply(lambda x: x.dayofyear//interval_in_days+1)
+    intervals = dates.apply(lambda x: x.dayofyear // interval_in_days + 1)
     year = dates.apply(lambda x: x.year)
-    days = pd.DataFrame({"intervals": intervals,
-                         "date": dates.dt.date,
-                         "year": year})
+    days = pd.DataFrame({
+        "intervals": intervals,
+        "date": dates.dt.date,
+        "year": year
+                        })
     return days.groupby(["intervals", "year"])["date"].transform(min)
 
 
@@ -73,23 +79,33 @@ df = read_data("test_data.parquet")
 df["new_ids"] = mergeIds(df)
 
 # get user input (sidebar)
-interval_ = st.sidebar.slider("Interval size (days)", 1, 180,
-                              help="This changes the time granularity of the plots and metrics")
+interval_ = st.sidebar.slider(
+    "Interval size (days)",
+    1,
+    180,
+    help="This changes the time granularity of the plots and metrics",
+)
 product_id = st.sidebar.selectbox("Product id", options=df.new_ids.unique())
 
 # product info
-product_name = df[df.new_ids == product_id]["Description"].reset_index(drop=True)[
-    0]
-product_stockCode = df[df.new_ids == product_id]["StockCode"].reset_index(drop=True)[
-    0]
+product_name = df[df.new_ids == product_id]["Description"] \
+    .reset_index(drop=True)[0]
+product_stockCode = df[df.new_ids == product_id]["StockCode"] \
+    .reset_index(drop=True)[0]
 
 st.sidebar.divider()
-st.sidebar.markdown(":grey[This Streamlit WebApp generates plots for sales, price, and EBIT based on a selected product and aggregation period. The data used spans from December 1, 2010, to December 9, 2011, and includes all transactions from a non-store, online retail business based in the UK.]")
 st.sidebar.markdown(
-    ":grey[Data source : https://archive.ics.uci.edu/dataset/352/online+retail]")
+    """:grey[This Streamlit WebApp generates plots for sales, price, and EBIT 
+    based on a selected product and aggregation period. The data used spans 
+    from December 1, 2010, to December 9, 2011, and includes all transactions
+    from a non-store, online retail business based in the UK.]"""
+)
+st.sidebar.markdown(
+    """:grey[Data source : 
+    https://archive.ics.uci.edu/dataset/352/online+retail]"""
+)
 st.sidebar.markdown(":grey[Author: Oussama Bastamy]")
-
-st.markdown(f"## Product Info:")
+st.markdown("## Product Info:")
 st.markdown(f"#### :green[Name :] {product_name}")
 st.markdown(f"#### :green[StockId :] {product_stockCode}")
 
@@ -99,11 +115,23 @@ st.markdown("# Sales, Price and EBIT during 2011")
 col1, col2 = st.columns(spec=[8, 2])
 
 # compute quantity(total) and price(averaged) over intervals
-df[f"Date"] = first_day_of_interval(df.InvoiceDate, interval_)
-sales = df[df.new_ids == product_id].sort_values("InvoiceDate").groupby(
-    f"Date").agg({"Quantity": "sum", "UnitPrice": "mean"})
+df["Date"] = first_day_of_interval(df.InvoiceDate, interval_)
+sales = (
+    df[df.new_ids == product_id]
+    .sort_values("InvoiceDate")
+    .groupby("Date")
+    .agg({"Quantity": "sum", "UnitPrice": "mean"})
+)
 sales["EBIT"] = sales["Quantity"] * sales["UnitPrice"]
-sales["Log_elasticity"] = np.log10(abs((sales.Quantity.diff()/sales.UnitPrice.diff())*(((sales.UnitPrice + sales.UnitPrice.shift()))/((sales.Quantity + sales.Quantity.shift())))))
+sales["Log_elasticity"] = np.log10(
+    abs(
+        (sales.Quantity.diff() / sales.UnitPrice.diff())
+        * (
+            ((sales.UnitPrice + sales.UnitPrice.shift()))
+            / ((sales.Quantity + sales.Quantity.shift()))
+        )
+    )
+)
 sales = sales.reset_index()
 
 
@@ -112,34 +140,48 @@ if interval_ == 1:
 else:
     period = f"{interval_} days"
 col1.markdown(
-    f"#### :green[Product Sales, Price and Earnings Before Interest and Taxes (EBIT), computed over {period}]")
+    f"""#### :green[Product Sales, Price and Earnings Before
+      Interest and Taxes (EBIT), computed over {period}]"""
+)
 
 
 # plot price - quantity - Profit
-col1.line_chart(sales, x="Date", y="Quantity",
-                height=160, use_container_width=True)
-col1.line_chart(sales, x="Date", y="UnitPrice",
-                height=160, use_container_width=True)
-col1.line_chart(sales, x="Date", y="EBIT",
-                height=160, use_container_width=True)
-col1.line_chart(sales, x="Date", y="Log_elasticity",
-                height=160, use_container_width=True)
+col1.line_chart(
+    sales, x="Date", y="Quantity", height=160, use_container_width=True)
+col1.line_chart(
+    sales, x="Date", y="UnitPrice", height=160, use_container_width=True)
+col1.line_chart(
+    sales, x="Date", y="EBIT", height=160, use_container_width=True)
+col1.line_chart(
+    sales, x="Date", y="Log_elasticity", height=160, use_container_width=True
+)
 
 # plot metrics
 col2.markdown("###")
 col2.markdown("#")
 col2.markdown("#")
-col2.metric("Avg sales", value=f"{millify(sales.Quantity.mean(),precision=1)}")
+col2.metric(
+    "Avg sales",
+    value=f"{millify(sales.Quantity.mean(),precision=1)}"
+    )
 col2.markdown("#")
 col2.markdown("#")
 col2.markdown("###")
 col2.metric(
-    "Avg price", value=f"{millify(sales.UnitPrice.mean(),precision=1)}$")
+    "Avg price",
+    value=f"{millify(sales.UnitPrice.mean(),precision=1)}$"
+    )
 col2.markdown("###")
 col2.markdown("###")
 col2.markdown("#")
-col2.metric("Avg EBIT", value=f"{millify(sales.EBIT.mean(),precision=1)}$")
+col2.metric(
+    "Avg EBIT",
+    value=f"{millify(sales.EBIT.mean(),precision=1)}$"
+    )
 col2.markdown("###")
 col2.markdown("###")
 col2.markdown("#")
-col2.metric("Avg Log Elasticity", value=f"{millify(sales.Log_elasticity.mean(),precision=1)}")
+col2.metric(
+    "Avg Log Elasticity",
+    value=f"{millify(sales.Log_elasticity.mean(),precision=1)}"
+)
